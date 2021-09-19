@@ -8,4 +8,4 @@ foreach ($htmlfiles as $file) {
     array_push($response, $original_name ); //Добавляет элементы в массив
 }
 
-var_dump($response);
+echo json_encode($response);
