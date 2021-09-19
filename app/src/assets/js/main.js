@@ -58,7 +58,8 @@ const add_new_page = async (evt) => {
         })
     
         const data = await response.json()
-        alert(data.message)
+        add_file_names_to_page_list(data)
+        alert('Страница создана!')
     } catch(e){
         alert(`Произошла ошибка, попробуйте еще раз`)
     }

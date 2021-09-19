@@ -9,7 +9,7 @@ $new_file = '../../../../' . $full_name;
 try {
     if(!file_exists($new_file)) {
         fopen($new_file, 'w');
-        $response['message'] = "Файл {$full_name} создан!";
+        $response[] = $full_name; 
     
     } else {
         header('HTTP/1.1 400 Bad Request');
