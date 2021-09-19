@@ -16,15 +16,16 @@ $name = preg_replace('/^\s/', '', $name);
 
 $name_without_extension = preg_replace('/\\.[^.\\s]{3,4}$/', '', $name);
 $full_name = $name_without_extension . '.html';
-$new_file = '../../../../' . $full_name;
+$file = '../../../../' . $full_name;
 
-if(!file_exists($new_file)) {
-    fopen($new_file, 'w');
-    $response['message'] = 'Файл создан!';
-    $response["file_name"] = $full_name; 
+if(file_exists($file)) {
+    unlink($file);
+    $response['message'] = "Файл удален!"; 
+    $response['file_name'] = $full_name; 
 } else {
     header('HTTP/1.0 400 Bad Request');
-    $response['message'] = "Файл {$full_name} уже существует!";
+    $response['message'] = "Файл {$full_name} не существует!";
 }
+
 
 echo json_encode($response);

@@ -45,7 +45,16 @@ export default class Editor extends Component {
         } catch(e){
             alert(e.response.data.message)
         }
-        
+    }
+
+    async deletePage(file_name) {
+        try {
+            const {data} = await axios.post('/admin/app/dist/api/delete-page.php', {file_name})
+            const pageList = this.state.pageList.filter(page => page !== data.file_name)
+            this.setState({pageList})
+        } catch(e) {
+            alert(e.response.data.message)
+        }
     }
 
     async createNewPage() {
@@ -70,7 +79,16 @@ export default class Editor extends Component {
         const {pageList} = this.state
         const pages = pageList.map((page, idx) => {
             return (
-                <h1 key={idx}>{page}</h1>
+                <h1 key={idx}>
+                    {page}
+                    <a 
+                        href="#"
+                        onClick={() => this.deletePage(page)}
+                        className="delete"
+                    >
+                        Удалить
+                    </a>
+                </h1>
             )
         })
         return (
