@@ -1,6 +1,8 @@
 import React, {Component} from 'react'
 import axios from 'axios'
 import '../../helpers/iframe-loader.js'
+import DOMHelper from '../../helpers/dom-helper.js'
+import EditorText from '../editor-text/editor-text.js'
 
 const validate_file_name = (() => {
 	const rg1=/^[^\\/:\*\?"<>\|]+$/  // eslint-disable-line
@@ -49,78 +51,47 @@ export default class Editor extends Component {
 		this.currentPage = page
 
 		axios.get(`../../../../${page}` + '?rnd=' + Math.random().toString().substring(2))
-			.then(({data}) => this.parseStrToDOM(data))
-			.then(this.wrapTextNodes)
+			.then(({data}) => DOMHelper.parseStrToDOM(data))
+			.then(DOMHelper.wrapTextNodes)
 			.then(dom => {
 				this.virtualDom = dom
 				return dom
 			})
-			.then(this.serializeDOMToString)
+			.then(DOMHelper.serializeDOMToString)
 			.then(html => axios.post('/admin/app/dist/api/save-temp-page.php', {html}))
 			.then(({data}) => this.iframe.load(`../../../../${data.file_name}`))
 			.then(() => this.enableEditing())
+			.then(() => this.injectStyles())
 	}
 
 	save() {
 		const newDom = this.virtualDom.cloneNode(this.virtualDom)
-		this.unwrapTextNodes(newDom)
-		const html = this.serializeDOMToString(newDom)
+		DOMHelper.unwrapTextNodes(newDom)
+		const html = DOMHelper.serializeDOMToString(newDom)
 		axios.post('/admin/app/dist/api/save-page.php', {pageName: this.currentPage, html})
 	}
 
 	enableEditing() {
 		this.iframe.contentDocument.body.querySelectorAll('text-editor').forEach(element => {
-			element.contentEditable = 'true'
-			element.addEventListener('input', () => {
-				this.onTextEdit(element)
-			})
+			const id = element.getAttribute('nodeid')
+			const virtualElement = this.virtualDom.body.querySelector(`[nodeid="${id}"]`)
+			new EditorText(element, virtualElement)
 		})
 	}
 
-	onTextEdit(element) {
-		const id = element.getAttribute('nodeid')
-		this.virtualDom.body.querySelector(`[nodeid="${id}"]`).innerHTML = element.innerHTML
-	}
-
-	parseStrToDOM(str) {
-		const parser = new DOMParser()
-		return parser.parseFromString(str, 'text/html')
-	}
-
-	serializeDOMToString(dom) {
-		const serializer = new XMLSerializer()
-		return serializer.serializeToString(dom)
-	}
-
-	unwrapTextNodes(dom) {
-		dom.body.querySelectorAll('text-editor').forEach(element => {
-			element.parentNode.replaceChild(element.firstChild, element)
-		})
-	}
-
-	wrapTextNodes(dom) {
-		const body = dom.body
-		let textNodes = []
-
-		function findTextElements(element) {
-			element.childNodes.forEach(node => {
-				if(node.nodeName === '#text' && node.nodeValue.replace(/\s+/g, '').length > 0) {
-					textNodes.push(node)
-				} else {
-					findTextElements(node)
-				}
-			})
-		}
-
-		findTextElements(body)
-		textNodes.forEach((node, i) => {
-			const wrapper = dom.createElement('text-editor')
-			node.parentNode.replaceChild(wrapper, node)
-			wrapper.appendChild(node)
-			wrapper.setAttribute('nodeid', i)
-		})
-
-		return dom
+	injectStyles() {
+		const style = this.iframe.contentDocument.createElement('style')
+		style.innerHTML = `
+			text-editor:hover {
+				outline: 3px solid orange;
+				outline-offset: 8px;
+			}
+			text-editor:focus {
+				outline: 3px solid red;
+				outline-offset: 8px;
+			}
+		`
+		this.iframe.contentDocument.head.appendChild(style)
 	}
 
 	async loadPageList() {
