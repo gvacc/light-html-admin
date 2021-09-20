@@ -170,7 +170,7 @@ export default class Editor extends Component {
 
 		return (
 			<>
-				<iframe src={this.currentPage} frameBorder="0"></iframe>
+				<iframe src="" frameBorder="0"></iframe>
 				{spinner}
 				<div className="panel">
 					<button 
@@ -186,7 +186,7 @@ export default class Editor extends Component {
 						Сохранить
 					</button>
 				</div>
-
+				
 				<ConfirmModal modal={true} target="modal-save" method={this.save}/>
 				<ChooseModal modal={true} target="modal-open" data={pageList} redirect={this.init}/>
 			</>

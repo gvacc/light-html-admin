@@ -18,7 +18,7 @@ const ChooseModal = ({modal, target, data, redirect}) => {
 
 	return (
 		<div id={target} uk-modal={modal.toString()}>
-			<div className="uk-modal-dialog uk-modal-body">
+			<div className="uk-modal-dialog uk-modal-body" id={target}>
 				<h2 className="uk-modal-title">Открыть</h2>
 				<ul className="uk-list uk-list-divider">
 					{pageList}
