@@ -1,5 +1,6 @@
 import React from 'react'
 
+// eslint-disable-next-line react/prop-types
 const Spinner = ({active}) => {
 	return (
 		<div className={active ? 'spinner active' : 'spinner'}>

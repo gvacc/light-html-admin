@@ -3,9 +3,9 @@ import axios from 'axios'
 import '../../helpers/iframe-loader.js'
 import DOMHelper from '../../helpers/dom-helper.js'
 import EditorText from '../editor-text/editor-text.js'
-import UIkit from 'uikit'
-import ModalPortal from '../ui/modalPortalSave/modal.js'
+import ConfirmModal from '../ui/confirm-modal/confirm-modal.js'
 import Spinner from '../ui/spinner/spinner.js'
+import ChooseModal from '../ui/choose-modal/choose-modal.js'
 
 const validate_file_name = (() => {
 	const rg1=/^[^\\/:\*\?"<>\|]+$/  // eslint-disable-line
@@ -41,13 +41,19 @@ export default class Editor extends Component {
 		this.createNewPage = this.createNewPage.bind(this)
 		this.isLoading = this.isLoading.bind(this)
 		this.isLoaded = this.isLoaded.bind(this)
+		this.save = this.save.bind(this)
+		this.init = this.init.bind(this)
 	}
 
 	componentDidMount() {
-		this.init(this.currentPage)
+		this.init(this.currentPage, null)
 	}
 
-	init(page) {
+	init(page, e) {
+		if(e) {
+			e.preventDefault()
+		}
+		this.isLoading()
 		this.iframe = document.querySelector('iframe')
 		this.open(page, this.isLoaded)
 		this.loadPageList()
@@ -65,7 +71,8 @@ export default class Editor extends Component {
 			})
 			.then(DOMHelper.serializeDOMToString)
 			.then(html => axios.post('/admin/app/dist/api/save-temp-page.php', {html}))
-			.then(({data}) => this.iframe.load(`../../../../${data.file_name}`))
+			.then(() => this.iframe.load('../../../../temp4FbfoPl.html'))
+			.then(() => axios.post('/admin/app/dist/api/delete-page.php' , {file_name: 'temp4FbfoPl.html'}))
 			.then(() => this.enableEditing())
 			.then(() => this.injectStyles())
 			.then(cb)
@@ -107,7 +114,7 @@ export default class Editor extends Component {
 
 	async loadPageList() {
 		try {
-			const {data} = await axios.get('/admin/app/dist/api/')
+			const {data} = await axios.get('/admin/app/dist/api/page-list.php')
 			this.setState({pageList: data})
 		} catch(e){
 			alert(e.response.data.message)
@@ -155,7 +162,7 @@ export default class Editor extends Component {
 	}
 
 	render() {
-		const {loading} = this.state
+		const {loading, pageList} = this.state
 		let spinner
 
 		// eslint-disable-next-line @babel/no-unused-expressions
@@ -164,8 +171,14 @@ export default class Editor extends Component {
 		return (
 			<>
 				<iframe src={this.currentPage} frameBorder="0"></iframe>
-
+				{spinner}
 				<div className="panel">
+					<button 
+						className="uk-button uk-button-primary uk-margin-small-right"
+						uk-toggle="target: #modal-open"
+					>
+						Открыть
+					</button>
 					<button 
 						className="uk-button uk-button-primary"
 						uk-toggle="target: #modal-save"
@@ -174,28 +187,8 @@ export default class Editor extends Component {
 					</button>
 				</div>
 
-				{spinner}
-
-				<ModalPortal>
-					<div className="uk-modal-dialog uk-modal-body">
-						<h2 className="uk-modal-title">Сохранение</h2>
-						<p>Вы уверены ?</p>
-						<p className="uk-text-right">
-							<button className="uk-button uk-button-default uk-modal-close" type="button">Отменить</button>
-							<button 
-								onClick={() => this.save(() => {
-									UIkit.notification({message: 'Сохранено', status: 'success'})
-								},
-								() => {
-									UIkit.notification({message: 'Не удалось сохранить', status: 'danger'})
-								})}
-								className="uk-button uk-button-primary uk-modal-close" 
-								type="button"
-							>
-									Сохранить</button>
-						</p>
-					</div>
-				</ModalPortal>
+				<ConfirmModal modal={true} target="modal-save" method={this.save}/>
+				<ChooseModal modal={true} target="modal-open" data={pageList} redirect={this.init}/>
 			</>
 		)
 	}

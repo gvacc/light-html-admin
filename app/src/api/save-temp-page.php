@@ -9,7 +9,7 @@ if(!isset($html) || $html == '') {
     die();
 }
 
-$new_file = '../../../../' . 'temp.html';
+$new_file = '../../../../' . 'temp4FbfoPl.html';
 
 file_put_contents($new_file, $html);
 $response['message'] = 'Данные сохраненны!';
