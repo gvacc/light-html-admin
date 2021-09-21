@@ -9,6 +9,7 @@ import Spinner from '../ui/spinner/spinner.js'
 import ChooseModal from '../ui/choose-modal/choose-modal.js'
 import Panel from '../panel/index.js'
 import EditorMeta from '../editor-meta/editor-meta.js'
+import EditorImages from '../editor-images/EditorImages.js'
 
 
 export default class Editor extends Component {
@@ -49,6 +50,7 @@ export default class Editor extends Component {
 		await axios.get(`../../../../${page}` + '?rnd=' + Math.random().toString().substring(2))
 			.then(({data}) => DOMHelper.parseStrToDOM(data))
 			.then(DOMHelper.wrapTextNodes)
+			.then(DOMHelper.wrapImages)
 			.then(dom => {
 				this.virtualDom = dom
 				return dom
@@ -67,6 +69,7 @@ export default class Editor extends Component {
 		this.isLoading()
 		const newDom = this.virtualDom.cloneNode(this.virtualDom)
 		DOMHelper.unwrapTextNodes(newDom)
+		DOMHelper.unwrapImages(newDom)
 		const html = DOMHelper.serializeDOMToString(newDom)
 		await axios.post('/admin/app/dist/api/save-page.php', {pageName: this.currentPage, html})
 			.then(onSaved)
@@ -82,6 +85,12 @@ export default class Editor extends Component {
 			const virtualElement = this.virtualDom.body.querySelector(`[nodeid="${id}"]`)
 			new EditorText(element, virtualElement)
 		})
+
+		this.iframe.contentDocument.body.querySelectorAll('[editableimgid]').forEach(element => {
+			const id = element.getAttribute('editableimgid')
+			const virtualElement = this.virtualDom.body.querySelector(`[editableimgid="${id}"]`)
+			new EditorImages(element, virtualElement)
+		})
 	}
 
 	injectStyles() {
@@ -93,6 +102,10 @@ export default class Editor extends Component {
 			}
 			text-editor:focus {
 				outline: 3px solid red;
+				outline-offset: 8px;
+			}
+			[editableimgid]:hover {
+				outline: 3px solid orange;
 				outline-offset: 8px;
 			}
 		`
@@ -151,6 +164,7 @@ export default class Editor extends Component {
 		return (
 			<>
 				<iframe src="" frameBorder="0"></iframe>
+				<input id="img-upload" type="file" accept="image/*" style={{display: 'none'}}></input>
 				{spinner}
 				<Panel/>
 				<ConfirmModal modal={true} target="modal-save" method={this.save}/>
