@@ -1,5 +1,11 @@
 <?php
 $image = $_FILES['image']['tmp_name'];
+
+if($_SESSION['auth'] != true) {
+    header('HTTP/1.0 403 Forbidden');
+    die;
+}
+
 if(file_exists($image) && is_uploaded_file($image)) {
 	$file_extension = explode('/', $_FILES['image']['type'])[1];
 	$file_name = uniqid() . '.' . $file_extension;

@@ -4,6 +4,11 @@ $pageName = $_POST['pageName'];
 $html = $_POST['html'];
 $response = [];
 
+if($_SESSION['auth'] != true) {
+    header('HTTP/1.0 403 Forbidden');
+    die;
+}
+
 if(!isset($pageName) || $pageName == '') {
     header('HTTP/1.0 400 Bad Request');
     $response['message'] = "Отправьте корректное имя";

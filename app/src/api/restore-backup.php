@@ -5,6 +5,11 @@ $page = $_POST['page'];
 
 $response = [];
 
+if($_SESSION['auth'] != true) {
+    header('HTTP/1.0 403 Forbidden');
+    die;
+}
+
 if(!isset($page) || $page == '') {
     header('HTTP/1.0 400 Bad Request');
     $response['message'] = "Отправьте название страницы";

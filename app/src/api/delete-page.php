@@ -3,6 +3,11 @@ $_POST = array_merge($_POST,json_decode(file_get_contents('php://input'),true));
 $name = $_POST['file_name'];
 $response = [];
 
+if($_SESSION['auth'] != true) {
+    header('HTTP/1.0 403 Forbidden');
+    die;
+}
+
 if(!isset($name) || $name == '') {
     header('HTTP/1.0 400 Bad Request');
     $response['message'] = "Введите название файла!";

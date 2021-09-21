@@ -3,13 +3,14 @@ import axios from 'axios'
 import '../../helpers/iframe-loader.js'
 import UIkit from 'uikit'
 import DOMHelper from '../../helpers/dom-helper.js'
-import EditorText from '../editor-text/editor-text.js'
-import ConfirmModal from '../ui/confirm-modal/confirm-modal.js'
-import Spinner from '../ui/spinner/spinner.js'
-import ChooseModal from '../ui/choose-modal/choose-modal.js'
-import Panel from '../panel/index.js'
-import EditorMeta from '../editor-meta/editor-meta.js'
-import EditorImages from '../editor-images/EditorImages.js'
+import EditorText from '../editor-text/'
+import ConfirmModal from '../ui/confirm-modal/'
+import Spinner from '../ui/spinner/'
+import ChooseModal from '../ui/choose-modal/'
+import Panel from '../panel/'
+import EditorMeta from '../editor-meta/'
+import EditorImages from '../editor-images/'
+import Login from '../login'
 
 
 export default class Editor extends Component {
@@ -20,28 +21,70 @@ export default class Editor extends Component {
 			pageList: [],
 			newPageName: '', //TODO: Поменять на fileName,
 			loading: true,
-			backupsList: []
+			backupsList: [],
+			auth: false,
+			loginError: false,
+			loginLengthError: false
 		}
 
 		this.isLoading = this.isLoading.bind(this)
 		this.isLoaded = this.isLoaded.bind(this)
 		this.save = this.save.bind(this)
 		this.init = this.init.bind(this)
+		this.login = this.login.bind(this)
+		this.logout = this.logout.bind(this)
 		this.restoreBackup = this.restoreBackup.bind(this)
 	}
 
 	componentDidMount() {
-		this.init(this.currentPage, null)
+		this.checkAuth()
+	}
+
+	componentDidUpdate(prevProps, prevState) {
+		if(this.state.auth !== prevState.auth) {
+			this.init(this.currentPage, null)
+		}
+	}
+
+	checkAuth() {
+		axios.get('/admin/app/dist/api/check-auth.php')
+			.then(res => {
+				this.setState({
+					auth: res.data.auth
+				})
+			})
+	}
+
+	login(password) {
+		if(password.length > 5) {
+			axios.post('/admin/app/dist/api/login.php', {password})
+				.then(res => {
+					this.setState({
+						auth: res.data.auth,
+						loginError: !res.data.auth,
+						loginLengthError: false
+					})
+				})
+		} else {
+			this.setState({
+				loginError: false,
+				loginLengthError: true
+			})
+		}
 	}
 
 	init(page, e) {
 		if(e) {
 			e.preventDefault()
 		}
-		this.isLoading()
-		this.iframe = document.querySelector('iframe')
-		this.open(page, this.isLoaded)
-		this.loadBackupList()
+		if(this.state.auth) {
+			this.isLoading()
+			this.iframe = document.querySelector('iframe')
+			this.open(page, this.isLoaded)
+			this.loadPageList()
+			this.loadBackupList()
+		}
+		
 	}
 
 	async open(page, cb) {
@@ -158,12 +201,25 @@ export default class Editor extends Component {
 		})
 	}
 
+	logout() {
+		axios.get('/admin/app/dist/api/logout.php')
+			.then(() => window.location.replace('/'))
+	}
+
 	render() {
-		const {loading, pageList, backupsList} = this.state
+		const {loading, pageList, backupsList, auth, loginError, loginLengthError} = this.state
 		let spinner
 
 		// eslint-disable-next-line @babel/no-unused-expressions
 		loading ? spinner = <Spinner active/> : spinner = <Spinner/>
+
+		if(!auth) {
+			return <Login 
+				login={this.login} 
+				lengthErr={loginLengthError}
+				logErr={loginError}
+			/>
+		}
 
 		return (
 			<>
@@ -171,7 +227,24 @@ export default class Editor extends Component {
 				<input id="img-upload" type="file" accept="image/*" style={{display: 'none'}}></input>
 				{spinner}
 				<Panel/>
-				<ConfirmModal modal={true} target="modal-save" method={this.save}/>
+				<ConfirmModal 
+					modal={true} 
+					target="modal-save" 
+					method={this.save}
+					text={{
+						title: 'Сохранение',
+						butn: 'Опубликовать'
+					}}
+				/>
+				<ConfirmModal 
+					modal={true} 
+					target="modal-logout" 
+					method={this.logout}
+					text={{
+						title: 'Выход',
+						btn: 'Выйти'
+					}}
+				/>
 				<ChooseModal modal={true} target="modal-open" data={pageList} redirect={this.init}/>
 				<ChooseModal modal={true} target="modal-backup" data={backupsList} redirect={this.restoreBackup}/>
 				{this.virtualDom ? <EditorMeta modal={true} target="modal-meta" virtualDom={this.virtualDom}/> : false }
