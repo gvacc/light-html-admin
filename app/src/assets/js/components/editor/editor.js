@@ -65,18 +65,22 @@ export default class Editor extends Component {
 		this.loadPageList()	
 	}
 
-	async save(onSaved, onError) {
+	async save() {
 		this.isLoading()
 		const newDom = this.virtualDom.cloneNode(this.virtualDom)
 		DOMHelper.unwrapTextNodes(newDom)
 		DOMHelper.unwrapImages(newDom)
 		const html = DOMHelper.serializeDOMToString(newDom)
 		await axios.post('/admin/app/dist/api/save-page.php', {pageName: this.currentPage, html})
-			.then(onSaved)
-			.catch(onError)
+			.then(() => this.showNotifications('Cохранено!', 'success'))
+			.catch(() => this.showNotifications('Произошла ошибка', 'danger'))
 			.finally(this.isLoaded)
 		
 		this.loadBackupList()
+	}
+
+	showNotifications(message, status) {
+		UIkit.notification({message, status})
 	}
 
 	enableEditing() {
@@ -89,7 +93,7 @@ export default class Editor extends Component {
 		this.iframe.contentDocument.body.querySelectorAll('[editableimgid]').forEach(element => {
 			const id = element.getAttribute('editableimgid')
 			const virtualElement = this.virtualDom.body.querySelector(`[editableimgid="${id}"]`)
-			new EditorImages(element, virtualElement)
+			new EditorImages(element, virtualElement, this.isLoading, this.isLoaded, this.showNotifications)
 		})
 	}
 

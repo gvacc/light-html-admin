@@ -1,5 +1,4 @@
 import React from 'react'
-import UIkit from 'uikit'
 
 // eslint-disable-next-line react/prop-types
 const ConfirmModal = ({modal, target, method}) => {
@@ -11,12 +10,7 @@ const ConfirmModal = ({modal, target, method}) => {
 				<p className="uk-text-right">
 					<button className="uk-button uk-button-default uk-modal-close" type="button">Отменить</button>
 					<button 
-						onClick={() => method(() => {
-							UIkit.notification({message: 'Сохранено', status: 'success'})
-						},
-						() => {
-							UIkit.notification({message: 'Не удалось сохранить', status: 'danger'})
-						})}
+						onClick={() => method()}
 						className="uk-button uk-button-primary uk-modal-close" 
 						type="button"
 					>
