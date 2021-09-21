@@ -6,27 +6,9 @@ import EditorText from '../editor-text/editor-text.js'
 import ConfirmModal from '../ui/confirm-modal/confirm-modal.js'
 import Spinner from '../ui/spinner/spinner.js'
 import ChooseModal from '../ui/choose-modal/choose-modal.js'
+import Panel from '../panel/index.js'
+import UIkit from 'uikit'
 
-const validate_file_name = (() => {
-	const rg1=/^[^\\/:\*\?"<>\|]+$/  // eslint-disable-line
-	const rg2=/^\./ 
-	const rg3=/^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i 
-	const rg4 = /^\s/
-
-	return (candidate) => {
-		const is_valid = rg1.test(candidate)
-                            &&!rg2.test(candidate)
-                            &&!rg3.test(candidate)
-                            &&!rg4.test(candidate)
-		if(is_valid) {
-			return candidate
-				.replace(/(\.[^/.]+$)/, '')
-				.replace(/\s/g, '')
-				.toLowerCase()
-		} 
-		return false
-	}
-})()
 
 export default class Editor extends Component {
 	constructor() {
@@ -34,15 +16,16 @@ export default class Editor extends Component {
 		this.currentPage = 'index.html'
 		this.state = {
 			pageList: [],
-			newPageName: '', //TODO: Поменять на file_name,
-			loading: true
+			newPageName: '', //TODO: Поменять на fileName,
+			loading: true,
+			backupsList: []
 		}
 
-		this.createNewPage = this.createNewPage.bind(this)
 		this.isLoading = this.isLoading.bind(this)
 		this.isLoaded = this.isLoaded.bind(this)
 		this.save = this.save.bind(this)
 		this.init = this.init.bind(this)
+		this.restoreBackup = this.restoreBackup.bind(this)
 	}
 
 	componentDidMount() {
@@ -56,13 +39,13 @@ export default class Editor extends Component {
 		this.isLoading()
 		this.iframe = document.querySelector('iframe')
 		this.open(page, this.isLoaded)
-		this.loadPageList()
+		this.loadBackupList()
 	}
 
-	open(page, cb) {
+	async open(page, cb) {
 		this.currentPage = page
 
-		axios.get(`../../../../${page}` + '?rnd=' + Math.random().toString().substring(2))
+		await axios.get(`../../../../${page}` + '?rnd=' + Math.random().toString().substring(2))
 			.then(({data}) => DOMHelper.parseStrToDOM(data))
 			.then(DOMHelper.wrapTextNodes)
 			.then(dom => {
@@ -75,18 +58,21 @@ export default class Editor extends Component {
 			.then(() => axios.post('/admin/app/dist/api/delete-page.php' , {file_name: 'temp4FbfoPl.html'}))
 			.then(() => this.enableEditing())
 			.then(() => this.injectStyles())
-			.then(cb)
+			.then(cb)	
+		this.loadPageList()	
 	}
 
-	save(onSaved, onError) {
+	async save(onSaved, onError) {
 		this.isLoading()
 		const newDom = this.virtualDom.cloneNode(this.virtualDom)
 		DOMHelper.unwrapTextNodes(newDom)
 		const html = DOMHelper.serializeDOMToString(newDom)
-		axios.post('/admin/app/dist/api/save-page.php', {pageName: this.currentPage, html})
+		await axios.post('/admin/app/dist/api/save-page.php', {pageName: this.currentPage, html})
 			.then(onSaved)
 			.catch(onError)
 			.finally(this.isLoaded)
+		
+		this.loadBackupList()
 	}
 
 	enableEditing() {
@@ -121,14 +107,25 @@ export default class Editor extends Component {
 		}
 	}
 
-	async deletePage(file_name) {
-		try {
-			const {data} = await axios.post('/admin/app/dist/api/delete-page.php', {file_name})
-			const pageList = this.state.pageList.filter(page => page !== data.file_name)
-			this.setState({pageList})
-		} catch(e) {
-			alert(e.response.data.message)
+	loadBackupList() {
+		axios.get('./backups/backups.json')
+			.then(res => this.setState(
+				{backupsList: res.data.filter(backup => backup.page ===  this.currentPage)}
+			))
+	}
+
+	restoreBackup(backup, e) {
+		if(e) {
+			e.preventDefault()
 		}
+		UIkit.modal.confirm('Все несохраненные данные будут потеряны!', {
+			labels: {ok: 'Восстановить', cancel: 'Отмена'}
+		}).then(() => {
+			this.isLoading()
+			return axios.post('/admin/app/dist/api/restore-backup.php', {'page': this.currentPage, 'file': backup})
+		}).then(() => {
+			this.open(this.currentPage, this.isLoaded)
+		})
 	}
 
 	isLoading() {
@@ -143,26 +140,8 @@ export default class Editor extends Component {
 		})
 	}
 
-	async createNewPage() {
-		try {
-			const file_name = this.state.newPageName
-			const is_valid_name = validate_file_name(file_name)
-
-			if(!is_valid_name) {
-				alert('Некорректное название файла!')
-				return
-			}
-			const {data} = await axios.post('/admin/app/dist/api/create-page.php', {file_name})
-			this.setState({pageList: [data.file_name, ...this.state.pageList,]})
-
-		} catch(e){
-			alert(e.response.data.message)
-		}
-        
-	}
-
 	render() {
-		const {loading, pageList} = this.state
+		const {loading, pageList, backupsList} = this.state
 		let spinner
 
 		// eslint-disable-next-line @babel/no-unused-expressions
@@ -172,23 +151,10 @@ export default class Editor extends Component {
 			<>
 				<iframe src="" frameBorder="0"></iframe>
 				{spinner}
-				<div className="panel">
-					<button 
-						className="uk-button uk-button-primary uk-margin-small-right"
-						uk-toggle="target: #modal-open"
-					>
-						Открыть
-					</button>
-					<button 
-						className="uk-button uk-button-primary"
-						uk-toggle="target: #modal-save"
-					>
-						Сохранить
-					</button>
-				</div>
-				
+				<Panel/>
 				<ConfirmModal modal={true} target="modal-save" method={this.save}/>
 				<ChooseModal modal={true} target="modal-open" data={pageList} redirect={this.init}/>
+				<ChooseModal modal={true} target="modal-backup" data={backupsList} redirect={this.restoreBackup}/>
 			</>
 		)
 	}
