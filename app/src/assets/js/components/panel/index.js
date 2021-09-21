@@ -7,13 +7,19 @@ const Panel = () => {
 				className="uk-button uk-button-primary uk-margin-small-right"
 				uk-toggle="target: #modal-open"
 			>
-						Открыть
+				Выбрать страницу
 			</button>
 			<button 
 				className="uk-button uk-button-primary uk-margin-small-right"
 				uk-toggle="target: #modal-save"
 			>
-						Сохранить
+				Опубликовать
+			</button>
+			<button 
+				className="uk-button uk-button-primary uk-margin-small-right"
+				uk-toggle="target: #modal-meta"
+			>
+				Редактировать META
 			</button>
 			<button 
 				className="uk-button uk-button-default"
@@ -21,7 +27,7 @@ const Panel = () => {
 			>
 				Восстановить
 			</button>
-			
+
 		</div>
 	)
 }
